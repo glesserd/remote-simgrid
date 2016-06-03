@@ -10,42 +10,73 @@
 #include <vector>
 #include <boost/shared_ptr.hpp>
 
-#include "rsg/RsgServiceImpl.h"
+#include <rsg/services.hpp>
 #include "rsg/mailbox.hpp"
 #include "rsg/host.hpp"
+#include "rsg/comm.hpp"
+#include <sys/types.h>
+#include <thread>
 
 namespace simgrid  {
 namespace rsg {
 
 class Mailbox;
 class Host;
+class Comm;
 
 class Actor {
+	friend rsg::Comm;
 private:
-	Actor();
+	Actor(unsigned long int addr, std::thread::id  );
 public:
 	/** Retrieves an instance of your representative in the remote SimGrid world */
-  static Actor &self();
-	void kill() {this->quit();}
-  void quit();
 	static void killAll();
+	static Actor *createActor(std::string name, rsg::Host host, std::function<int()> code);
+	void kill();
 	void setAutoRestart(bool autorestart);
 	void setKillTime(double time);
 	double getKillTime();
-  void sleep(const double duration);
-  void execute(const double flops);
-  char *recv(Mailbox &mailbox);
-  void send(Mailbox &mailbox, const char*content);
-  void send(Mailbox &mailbox, const char*content, int simulatedSize);
-  const char*getName();
+  char*getName();
   Host *getHost();
   int getPid();
+	~Actor() {}
 
 private:
-	static Actor *pSelf;
-  rsg::Host *pHost;
-	static boost::shared_ptr<RsgActorClient> pActorService;
+	unsigned long int p_remoteAddr = 0;
+	rsg::Host *pHost;
+public:
+		std::thread::id pThreadId;
 };
+
+namespace this_actor {
+
+  // Static methods working on the current actor:
+
+  /** Block the actor sleeping for that amount of seconds (may throws hostFailure) */
+  XBT_PUBLIC(void) sleep(double duration);
+
+  /** Block the actor, computing the given amount of flops */
+  XBT_PUBLIC(void) execute(double flop);
+
+  /** Block the actor until it gets a message from the given mailbox.
+   *
+   * See \ref Comm for the full communication API (including non blocking communications).
+   */
+  XBT_PUBLIC(char*) recv(Mailbox &chan);
+
+  /** Block the actor until it delivers a message of the given simulated size to the given mailbox
+   *
+   * See \ref Comm for the full communication API (including non blocking communications).
+  */	
+	XBT_PUBLIC(void) send(Mailbox &mailbox, const char*content, size_t dataSize);
+
+	XBT_PUBLIC(void) send(Mailbox &mailbox, const char*content, size_t dataSize, size_t simulatedSize);
+
+	XBT_PUBLIC(void) quit();
+
+
+};
+
 }} // namespace simgrid::rsg
 
 #endif /* SIMGRID_RSG_ACTOR_HPP */

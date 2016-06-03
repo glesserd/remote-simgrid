@@ -5,9 +5,13 @@
 #include <sys/socket.h>
 #include <thread>
 
-#include "rsg/RsgServiceImpl.h"
+#include "rsg/services.hpp"
+#include "rsg/RsgThriftSimpleServer.hpp"
+#include "rsg/RsgThriftServerFramework.hpp"
 
+#include <boost/shared_ptr.hpp>
 #include <boost/unordered_map.hpp>
+
 #include <thrift/server/TSimpleServer.h>
 #include <thrift/transport/TServerSocket.h>
 
@@ -22,22 +26,27 @@ using namespace ::apache::thrift::server;
  */
 class SocketServer  {
   public :
-    SocketServer(std::string host, int port);
+    static SocketServer& getSocketServer();
+    static SocketServer& createSocketServer(std::string host, int port);
+  public :
     ~SocketServer();
     int connect();
     int closeServer();
 
-    TServerFramework* acceptClient(TProcessor *processor);
-
+    RsgThriftServerFramework* acceptClient(TProcessor *processor);
+    RsgThriftServerFramework* createRpcServer(int port, TProcessor *processor);
+    RsgThriftServerFramework* createRpcServer(int port);
   protected :
+    SocketServer(std::string host, int port);
     int getSocket() const;
-    TServerFramework* createRpcServer(int port, TProcessor *processor);
   private :
 
     std::string pHostname;
     int pPort;
     int pSocketDesc;
     int pEndServer;
+    static bool sCreated;
+    static boost::shared_ptr<SocketServer> sServer;
 
 };
 

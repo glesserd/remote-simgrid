@@ -8,38 +8,34 @@
 
 #include "rsg/mailbox.hpp"
 #include "client/RsgClientEngine.hpp"
+#include "client/multiThreadedSingletonFactory.hpp"
+
+using namespace ::simgrid;
 
 XBT_LOG_EXTERNAL_CATEGORY(RSG);
 XBT_LOG_NEW_DEFAULT_SUBCATEGORY(RSG_CHANNEL,RSG,"RSG Communication Mailboxes");
 
 
-using namespace simgrid;
-
-boost::unordered_map <std::string, rsg::Mailbox *> *rsg::Mailbox::mailboxes = new boost::unordered_map<std::string, rsg::Mailbox*> ();
-boost::shared_ptr<RsgMailboxClient> rsg::Mailbox::pMailboxService(NULL);
-
 rsg::Mailbox::Mailbox(const char*name, unsigned long int remoteAddr) {
 	p_remoteAddr = remoteAddr;
 	p_name=name;
-	mailboxes->insert({name, this});
 }
 
 rsg::Mailbox *rsg::Mailbox::byName(const char*name) {
 	rsg::Mailbox * res;
+	
+	ClientEngine& engine = MultiThreadedSingletonFactory::getInstance().getEngine(std::this_thread::get_id());
+
 	try {
-		res = mailboxes->at(name);
-	} catch (std::out_of_range& e) {
-		if(!pMailboxService) {
-			ClientEngine& engine = ClientEngine::getInstance();
-			pMailboxService = boost::shared_ptr<RsgMailboxClient>(engine.serviceClientFactory<RsgMailboxClient>("RsgMailbox"));
-		}
-		unsigned long int remoteAddr = pMailboxService->mb_create(name);
+		unsigned long int remoteAddr =  engine.serviceClientFactory<RsgMailboxClient>("RsgMailbox").mb_create(name);
 		res = new Mailbox(name, remoteAddr);
+		return res;
+	} catch(apache::thrift::transport::TTransportException &ex) {
+		fprintf(stderr, "error creating mailbox %s in rsg::Mailbox::byName : %s \n", name ,ex.what());
+		_exit(1);
 	}
-	return res;
+	return NULL;
 }
 
 void rsg::Mailbox::shutdown() {
-	rsg::Mailbox::mailboxes->clear();
-	delete rsg::Mailbox::mailboxes;
 }
