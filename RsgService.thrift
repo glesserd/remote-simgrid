@@ -23,6 +23,8 @@ service RsgActor    {
   string recv(1:i64 mbAddr)
   void close()
   void kill(1:i64 mbAddr)
+  void killPid(1:i32 pid)
+  void join(1:i64 addr)
   string getName(1:i64 addr)
   rsgHostCurrentResType getHost(1:i64 addr)
   i32 getPid(1:i64 addr)
@@ -32,6 +34,7 @@ service RsgActor    {
   void killAll()
   rsgServerRemoteAddrAndPort createActorPrepare()
   i64 createActor(1:i64 remoteServerAddr, 2:i32 port , 3:string name, 4:i64 host, 5:i32 killTime)
+  void deleteActor(1:i64 addr)
 }
 
 service RsgMailbox   {

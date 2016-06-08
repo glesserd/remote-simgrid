@@ -29,17 +29,18 @@ class Actor {
 private:
 	Actor(unsigned long int addr, std::thread::id  );
 public:
-	/** Retrieves an instance of your representative in the remote SimGrid world */
 	static void killAll();
-	static Actor *createActor(std::string name, rsg::Host host, std::function<int()> code);
+	static Actor *createActor(std::string name, rsg::Host host, std::function<int(void *)> code, void *data);
+	static void kill(int pid);
 	void kill();
+	void join();
 	void setAutoRestart(bool autorestart);
 	void setKillTime(double time);
 	double getKillTime();
   char*getName();
   Host *getHost();
   int getPid();
-	~Actor() {}
+	~Actor();
 
 private:
 	unsigned long int p_remoteAddr = 0;

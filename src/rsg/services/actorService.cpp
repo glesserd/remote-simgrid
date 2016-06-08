@@ -6,6 +6,7 @@
 #include "simgrid/s4u.h"
 #include "RsgMsg.hpp"
 #include <iostream>
+#include <stdexcept>
 #include <boost/shared_ptr.hpp>
 #include <thrift/processor/TMultiplexedProcessor.h>
 
@@ -98,11 +99,22 @@ void rsg::RsgActorHandler::kill(const int64_t mbAddr) {
   actor->kill();
 }
 
+void rsg::RsgActorHandler::killPid(const int32_t pid) {
+  try {
+    s4u::Actor::kill(pid);
+  } catch( const std::exception & e ) {
+    std::cerr << e.what();
+  }
+}
+
+void rsg::RsgActorHandler::join(const int64_t addr) {
+  s4u::Actor *actor = (s4u::Actor*) addr;
+  actor->join();
+}
 
 void rsg::RsgActorHandler::createActorPrepare(rsgServerRemoteAddrAndPort& _return) {
     int rpcPort = getFreePort(1024);
     bool connected = false;
-
 
     RsgThriftServerFramework* server = NULL;
     do {
@@ -118,8 +130,6 @@ void rsg::RsgActorHandler::createActorPrepare(rsgServerRemoteAddrAndPort& _retur
     
     _return.addr = (unsigned long int) server;
     _return.port = rpcPort;
-
-
 }
 
 class RsgActor {
@@ -128,7 +138,6 @@ public:
   RsgThriftServerFramework *pServer;
   int pPort;
   int operator()() {
-
   
       pServer->serve();
       delete pServer;
@@ -142,4 +151,9 @@ int64_t rsg::RsgActorHandler::createActor(const int64_t remoteServerAddr, const 
   RsgThriftServerFramework* server = (RsgThriftServerFramework*) remoteServerAddr;
   int64_t addr = (int64_t) new simgrid::s4u::Actor(name.c_str(), host, RsgActor(server, port));
   return addr;
+}
+
+void rsg::RsgActorHandler::deleteActor(const int64_t addr)  {
+  s4u::Actor *actor = (s4u::Actor*) addr;
+  delete actor;
 }

@@ -46,40 +46,31 @@ class PidComp {
   public:
   PidComp(std::string name) : pName(name) {}
   std::string pName;
-  int operator()(void * ) {
+  int operator()(void *) {
+    XBT_INFO("hello");
+
     rsg::Mailbox *mbox = rsg::Mailbox::byName(this->pName.c_str());
     uint64_t *pid = (uint64_t*) rsg::this_actor::recv(*mbox);
-
-    std::stringstream ssid;
-    ssid << std::this_thread::get_id();
-    uint64_t id = std::stoull(ssid.str());
-    
-    XBT_INFO("PidComp ->  %" PRIu64 "", id - *pid);
+    UNUSED(pid);
     rsg::this_actor::quit();
     return 1;
   }
 };
 
 
-int Spwaner(void * ) {
+int Spwaner(void *) {
   rsg::Host host1 = rsg::Host::by_name("host1");
-
-  for(int i = 0; i < 100; i++) {
-    std::stringstream ss;
-    boost::uuids::uuid uuid = boost::uuids::random_generator()();
-    ss << uuid;
-    rsg::Mailbox *mbox = rsg::Mailbox::byName(ss.str().c_str());
-
-    rsg::Actor* actor = rsg::Actor::createActor("hello" , host1 , PidComp(std::string(ss.str())), NULL);
-
-    std::stringstream ssid;
-    ssid << actor->pThreadId;
-    uint64_t id = std::stoull(ssid.str());
-    
-    rsg::this_actor::send(*mbox, (char*) &(id), sizeof(uint64_t));
+  /* generate secret number between 1 and 10: */
+  for(int i = 0; i < 10; i++) {
+    rsg::Actor* actor = rsg::Actor::createActor("hello" , host1 , PidComp("hello"), NULL);
+    if(rand() % 2 == 0) {
+      rsg::this_actor::sleep(1);
+      rsg::Actor::kill(actor->getPid());
+    } else {
+      actor->kill();
+    }
     delete actor;
   }
-
   rsg::this_actor::quit();
   return 1;
 }
@@ -90,10 +81,11 @@ int main(int argc, char **argv) {
   for(int i = 0; i < 4; i++) {
     rsg::Actor* actor =  rsg::Actor::createActor("spawner" , host1 , Spwaner, NULL);
     UNUSED(actor);
+    actor->join();
     delete actor;
   }
   
-  rsg::this_actor::sleep(1000);
+  rsg::Actor::kill(-1);
   rsg::this_actor::quit();
   
   return 0; 
